@@ -1,0 +1,149 @@
+---
+title: "Homework 1"
+author: "Molly Olson"
+date: "September 6, 2015"
+output: html_document
+---
+
+#Create a Data Set
+```{r}
+gender <- c('M','M','F','M','F','F','M','F','M')
+age <- c(34, 64, 38, 63, 40, 73, 27, 51, 47)
+smoker <- c('no','yes','no','no','yes','no','no','no','yes')
+exercise <- factor(c('moderate','frequent','some','some','moderate','none','none','moderate','moderate'),
+                    levels=c('none','some','moderate','frequent'), ordered=TRUE
+)
+los <- c(4,8,1,10,6,3,9,4,8)
+x <- data.frame(gender, age, smoker, exercise, los)
+x
+```
+
+#Create a Model
+```{r}
+lm(los~ gender + age + smoker + exercise, dat=x)
+```
+
+1. Looking at the output, which coefficient seems to have the highest effect on `los`?  
+  
+The beta coefficient for `gender` is the highest. This means as gender increases from female to male, `los` increases by approximately 4.508674 units, whereas all other coefficients will have a lower effect than this.   
+
+ˆ1. Create a model using `los` and `gender` and assign it to the variable `mod`. Run the `summary` function with `mod` as its argument.  
+```{r}
+mod <- lm(los~gender, data=x)
+summary(mod)
+```
+
+#Estimates
+1. What is the estimate for the intercept? What is the estimate for gender? Use the `coef` function.
+```{r}
+coef(summary(mod))
+coef(mod)
+```
+  The coefficient for the `intercept` is 3.5 and the coefficient for `gender` is 4.3.
+  
+2.The second column of `coef` are standard errors. These can be calculated by taking the `sqrt` of the `diag` of the `vcov` of the `summary` of `mod`. Calculate the standard errors.    
+```{r}
+sqrt(diag(vcov(summary(mod))))
+```
+
+The third column of `coef` are test statistics. These can be calculated by dividing the first column by the second column.  
+```{r}
+mod.c <- coef(summary(mod))
+mod.c[,1]/mod.c[,2]
+```
+
+The fourth column of `coef` are p values. This captures the probability of observing a more extreme test statistic. These can be calculated with the `pt` function, but you will need the degrees-of-freedom. For this model, there are 7 degrees of freedom.  
+1. Use the `pt` function to calculate the p value for gender. The first argument should be the test statistic for gender and the second argument is the degrees of freedom. Also, set the `lower.tail` argument to FALSE. Finally, multiply the result by two.  
+```{r}
+2*pt(2.917110,7,lower.tail=FALSE)
+```
+
+#Predicted Values
+The estimates can be used to create predicted vaues.
+```{r}
+3.5+(x$gender=='M')*4.3
+```
+1. It is even easier to see the predicted values by passing the model `mod` to the `predict` or `fitted` functions. Try it out.
+```{r}
+predict(mod)
+fitted(mod)
+```
+  
+1. `predict` can also use a new data set. Pass `newdat` as the second argument to `predict`
+```{r}
+newdat <- data.frame(gender=c('F','M','F'))
+predict(mod,newdat)
+```
+
+#Residuals
+The difference between predicted valeus and observed values are residuals.  
+1. Use one of the methods to generate  predicted values. Subtract the predicted value from the `x$los` column. 
+```{r}
+predictval <- predict(mod)
+x$los - predictval
+```
+
+1. Try passing `mod` to the residuals function.
+```{r}
+residuals(mod)
+```
+
+1. Square the residuals, and then sum these values. Compare this result to the result of passing `mod` to the `deviance` function.
+```{r}
+sum((residuals(mod))^2)
+deviance(mod)
+```
+The sum of squares of residuals is equal to the deviance, which we would expect.  
+
+Remember that our model object has two items in the formula, `los` and `gender`. The residual degrees-of-freedom is the number of observations minus the number of items to account for in the model formula.  
+This can be seen by passing `mod` to the function `df.residual`
+```{r}
+df.residual(mod)
+```
+   
+1. Calculate standard error by dividing the deviance by the degrees of freedom, and then taking the square root. Verify that this matches the output labeled "Residual standard error" from `summary(mod)`.
+
+```{r}
+sqrt(deviance(mod)/df.residual(mod))
+summary(mod)
+```
+
+Note it will also match this output:
+```{r}
+predict(mod, se.fit=TRUE)$residual.scale
+```
+
+#T-test
+   
+Let's compare the results of our model to a two-sample t-test. We will compare `los` by men and women. 
+  
+1. Create a subset of `x` by taking all records where gender is 'M' and assigning it to the variable `men`. Do the same for the variable `women`.
+```{r}
+men <- data.frame(subset(x,gender == 'M'))
+women <- data.frame(subset(x,gender == 'F'))
+#men
+#women 
+```
+  
+2. By default a two-sampled t-test assumes that the two groups have unequal variances. You can calculate variances with `var` function. Calculate variance for `los` for the `men` and `women` data sets.
+```{r}
+var(men$los)
+var(women$los)
+```
+  
+3. Call the `t.test` function, where the first argument is `los` for women and the second argument is `los` for men. Call it a second time by adding the argument `var.equal` and setting it to TRUE. Does either produce output that matches the pvalue for gender from the model summary?
+```{r}
+t.test(men$los, women$los)
+t.test(men$los, women$los, var.equal=TRUE)
+summary(mod)
+```
+When we set `var.equal` to TRUE, we get a pvalue that is similar to four decimal places to the plavue for gender from the model summary.
+  
+An alternate way to call `t.test` is to use a formula
+```{r}
+t.test(los ~gender, dat=x, var.equal=TRUE)
+# compare pvalues
+t.test(los ~ gender, dat=x, var.equal=TRUE)$p.value
+coef(summary(lm(los ~ gender, dat=x)))[2,4]
+```
+
