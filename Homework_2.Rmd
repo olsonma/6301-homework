@@ -2,7 +2,7 @@
 title: "Homework 2"
 author: "Molly Olson"
 date: "September 29, 2015"
-output: html_document
+output: pdf_document
 ---
 ---
 title: "Homework_2"
@@ -242,9 +242,12 @@ evenFibCounter <- 0
 for(i in 1:length(fibVec)){
   #if the ith value in the fibVec is even, let's add it to evenFib vector and increment the counter by 1
   if(fibVec[i] %% 2 == 0){
-      evenFib[evenFibCounter] <- fibVec[i]
       evenFibCounter <- evenFibCounter + 1
+      evenFib[evenFibCounter] <- fibVec[i]
   }
+  if(evenFibCounter == 15){
+        break
+      }
 }
 #sum of the first 15 even Fibonacci values
 sum(evenFib)

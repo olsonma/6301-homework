@@ -266,13 +266,16 @@ evenFibCounter &lt;- 0
 for(i in 1:length(fibVec)){
   #if the ith value in the fibVec is even, let's add it to evenFib vector and increment the counter by 1
   if(fibVec[i] %% 2 == 0){
-      evenFib[evenFibCounter] &lt;- fibVec[i]
       evenFibCounter &lt;- evenFibCounter + 1
+      evenFib[evenFibCounter] &lt;- fibVec[i]
   }
+  if(evenFibCounter == 15){
+        break
+      }
 }
 #sum of the first 15 even Fibonacci values
 sum(evenFib)</code></pre>
-<pre><code>## [1] 26658145584</code></pre>
+<pre><code>## [1] 1485607536</code></pre>
 </div>
 
 
