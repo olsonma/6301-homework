@@ -1,0 +1,148 @@
+---
+title: "Homework 3"
+author: "Molly Olson"
+date: "October 3, 2015"
+output: pdf_document
+---
+#Question 2
+Write a simulation to calculate the power for the following study design. The study has two variables, treatment group and outcome. There are two treatment groups (0,1) and they should be assigned randomly with equal probability. The outcome should be a random normal variable with a mean of 60 and a standard deviation of 20. If a patient is in the treatment group, add 5 to the outcome. 5 is the true treatment effect. Create a linear of model for the outcome by the treatment grouop, and extract the p-value (hint: see assignment 1). Test if the p-value is less than or equal to the alpha level, which should be set to 0.05.  
+ 
+Repeat this procedure 1000 times. The power is calculated by finding the percentage of times the p-value is less than or equal to the alpha level. Use the `set.seed` command so that the professor can reproduce your results.  
+
+```{r}
+#nset seed
+set.seed(1)
+
+```
+```{r}
+#the function takes the number of patients. It is one procedure through and will be used to repeat the procedure in a loop
+treatment <- function(sampleSize){
+  
+  #treatment groups
+  treatmentGroups <- c(0,1)
+  # assign treatments for n patients, we can use sample because
+  #there is equal probability of being in either treatment group
+  treatmentPerPatient <- sample(treatmentGroups, sampleSize, replace=TRUE)
+  #treatments
+  
+  #outcome should be normal with mu=60 and Sigma=20
+  outcome <- rnorm(sampleSize, mean = 60, sd = 20)
+  
+  #if the patient is in the treatment group, i=1, then add 5 to it, otherwise do nothing
+  treatmentOutcome <- ifelse(treatmentPerPatient==1, outcome + 5, outcome)
+  #treatmentOutcome
+
+  #craeate a linear model for the outcome by treatment group
+  linMod <- lm(treatmentOutcome ~ treatmentPerPatient)
+  #summary(linMod)
+  #return the pvalue
+  p <- coef(summary(linMod))[2,4]
+  return(p)
+}
+```
+```{r}
+getPower <- function(simulations, sampleSize, alpha){
+  #repeat procedure (simulations) number of times
+  #allPvalues will have all of the pvalues for each simulation
+  allPvalues <- replicate(simulations, treatment(sampleSize))
+  #power is the percentage of times the pvalue is less than alpha
+  power <- sum(allPvalues <= alpha)/simulations
+  return(power)
+}
+```
+1. Find the power when the sample size is 100 patients
+```{r}
+getPower(1000, 100, 0.05)
+```
+2. Find the power when the sample size is 1000 patients
+```{r}
+getPower(1000,1000,0.05)
+```
+
+#Question 3
+Obtain a copy of the football-values lecture. Save the `2015/proj_rb15.csv` file in your working directory. Read in the data set and remove the first two columns.  
+
+
+```{r}
+setwd("~/Documents/Vanderbilt_2015_Fall/Statistical_Computing/football-values-master/2015")
+library(MASS)
+
+rb_data <- read.csv("proj_rb15.csv",header=TRUE)
+
+newrb <- rb_data[c(-1,-2)]
+```
+
+1. Show the correlation matrix of this dataset. 
+```{r}
+rho <- cor(newrb)
+```
+2.
+Generate a data set with 30 rows that has a similar correlation structure. Repeat the procedure 10,000 times and return the mean correlation matrix.   
+```{r}
+rho.rb <- cor(newrb) ##Correlation matrix
+vcov.rb <- var(newrb) ##Variance matrix
+means.rb <- colMeans(newrb) ##returns the mean for columns
+```
+
+```{r}
+##simultate using mvnorm, 30 values, mu and sigma the same as rb data
+rb.sim <- mvrnorm(30, mu = means.rb, Sigma = vcov.rb)
+##convert to data frame
+rb.sim <- as.data.frame(rb.sim)
+rb.sim
+```
+
+```{r}
+rho.sim <- cor(rb.sim)
+rho.sim ## this is the similar correlation matrix
+rho.rb ## this is the original correlation matrix
+```
+
+```{r}
+average <-0
+n <- 10000
+for(i in seq(n)){
+	rb.sim <- mvrnorm(30, mu = means.rb, Sigma=vcov.rb) #create several datasets using mvrnorm
+	average <- average + cor(rb.sim)/n #just keep adding the average to build up the average
+	}
+average ## this is the mean correlation matrix with similar correlation structure
+rho.rb ##this is the original data correlation matrix
+```
+#Question 4
+
+1. 
+\begin{equation}
+\begin{split}
+  P(B) &= \sum_j P(B|A_j) P(A_j),\\
+       &\Rightarrow P(A_i |B)=\frac{P(B|A_i)P(A_i)}{\sum _j (B|A_j)P(A_j)}
+\end{split}
+\end{equation}
+
+2. 
+\begin{equation}
+  \hat{f}(\zeta)= \int_{-\infty}^{\infty} f(x) e^{-2 \pi i x \zeta} dx
+\end{equation}
+
+3. 
+\begin{equation}
+\textbf{J} = \frac{d \textbf{f}}{d \textbf{x}} = \begin{bmatrix} 
+\frac{\partial \textbf{f}}{\partial x_1} & \dots & \frac{\partial \textbf{f}}{\partial x_n}
+\end{bmatrix}
+\begin{bmatrix}
+\frac{\partial f_1}{\partial x_2} & \dots & \frac{\partial f_1}{\partial x_n} \\
+\vdots & \ddots & \vdots \\
+\frac{\partial f_m}{\partial x_1} & \dots & \frac{\partial f_m}{\partial x_n}
+\end{bmatrix}
+\end{equation}
+
+
+### Notes/Grade
+
+```{r}
+# Question 3.3? (-2 pt)
+exact <- mvrnorm(30, mu = colMeans(x), Sigma = var(x), empirical = TRUE)
+cor(exact)
+```
+
+
+48/50 points
