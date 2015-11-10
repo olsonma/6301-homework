@@ -1,0 +1,305 @@
+---
+title: "Homework 5"
+author: "Molly Olson"
+date: "November 8, 2015"
+output: pdf_document
+---
+
+#Question 1
+*Import the HAART dataset (haart.csv) from the GitHub repository into R, and perform the following manipulations:*  
+```{r}
+#read in the data
+library(knitr)
+setwd("~/Documents/Vanderbilt_2015_Fall/Statistical_Computing/Bios6301-master/datasets")
+haart <- read.csv("haart.csv", header=TRUE)
+haart2 <- read.csv("haart2.csv",header=TRUE)
+
+head(haart)
+```
+
+
+1. *Convert date columns into a usable (for analysis) format. Use the table command to display the counts of the year from init.date.*  
+```{r}
+class(haart[,9])
+haart[,9] <- as.Date(haart[,9], format="%m/%d/%y")
+class(haart[,9])
+haart[,10] <- as.Date(haart[,10], format="%m/%d/%y")
+haart[,12] <- as.Date(haart[,12], format="%m/%d/%y")
+
+```
+
+```{r}
+require(lubridate)
+table(year(haart[,'init.date'])) 
+```
+
+2. *Create an indicator variable (one which takes the values 0 or 1 only) to represent death within 1 year of the initial visit. How many observations died in year 1?*  
+```{r}
+#I tested that I was getting the correct results, with NA's
+haart[,'deathWithinYear'] <- rep(0,1000) #create variable
+for(i in 1:length(haart[,'deathWithinYear'])){
+  ifelse(as.numeric(difftime(haart[i,12], haart[i,9], units='days')) <= 365, haart[i,'deathWithinYear'] <- 1, haart[i,'deathWithinYear'] <- 0) #if the difference in time is within 365 days, then assign value 1, otherwise 0
+}
+#head(haart)
+
+sum(haart[,'deathWithinYear'],na.rm=TRUE) #sum how many 'successes'
+ #There are 92 observations that died within 1 year.
+```
+
+3. *Use the init.date, last.visit and death.date columns to calculate a followup time (in days), which is the difference between the first and either the last visit or a death event (whichever comes first). If these times are longer than 1 year, censor them (this means if the value is above 365, set followup to 365). Print the quantile for this new variable.*  
+
+```{r}
+haart[,'followup.time'] <- rep(0,1000)
+
+for(i in 1:length(haart[,'followup.time'])){
+  last.init.diff <- NULL #initialize 
+  death.init.diff <- NULL
+  
+  if(!is.na(haart[i,'last.visit'])) death.init.diff <-  difftime(haart[i,'last.visit'],haart[i,'init.date'],units='days') #as long as last.visit isn't na,
+  #evaluate the difference in time for last visit and initial visit, assign it to last.init.diff
+  if(!is.na(haart[i,'date.death'])) last.init.diff <- difftime(haart[i,'date.death'],haart[i,'init.date'],units='days') #as long as date.death isn't na,
+  #evaluate the difference in time for the date of death and initial visit, assign it to death.init
+  
+haart[i,'followup.time'] <- min(365,last.init.diff,death.init.diff) #take the minimum value between
+#365, difference in death/init and last visit/init.
+}
+#head(haart)
+
+quantile(haart[,'followup.time'])
+```
+
+4. *Create another indicator variable representing loss to followup; this means the observation is not known to be dead but does not have any followup visits after the first year. How many records are lost-to-followup?*  
+```{r}
+haart[,'loss.to.followup'] <- rep(0,1000)
+
+#if not dead and followup is within 1 year of init.date 
+for(i in 1:length(haart[,'loss.to.followup'])){
+  if(!is.na(haart[i,'last.visit'])) dif <- difftime(haart[i,'last.visit'],haart[i,'init.date'],units='days')
+  
+  if(dif <= 365 & haart[i,'death'] == 0){
+    haart[i,'loss.to.followup'] <- 1 #if the difference in last visit and intit date is less than a year
+    # and we don't have record of them dying,then censor them
+  }
+  }
+  head(haart)
+
+sum(haart[,'loss.to.followup'])
+#173 observations lost to followup
+```
+
+5.*Recall our work in class, which separated the init.reg field into a set of indicator variables, one for each unique drug. Create these fields and append them to the database as new columns. Which drug regimen are found over 100 times?*  
+```{r}
+reg_list <- strsplit(as.character(haart[,'init.reg']), ',')
+head(sapply(reg_list, function(x) 'D4T' %in% x))
+
+all_drugs <- unique(unlist(reg_list))
+reg_drugs <- matrix(nrow=nrow(haart), ncol=length(all_drugs))
+for(i in seq_along(all_drugs)){
+  # + makes this 1/0 instead of T/F
+  reg_drugs[,i] <- +sapply(reg_list, function(x) all_drugs[i] %in% x)
+}
+colnames(reg_drugs) <- all_drugs
+haart <- cbind(haart, reg_drugs)
+head(haart)
+
+```
+
+```{r}
+#16:33 are the drug columns in haart
+for(i in 16:33){
+  sum <- sum(haart[,i])
+  if(sum > 100){
+    print(colnames(haart)[i])
+  }
+}
+```
+
+6. *The dataset `haart2.csv` contains a few additional observations for the same study. Import these and append them to your master dataset (if you were smart about how you coded the previous steps, cleaning the additional observations should be easy!). Show the first five records and the last five records of the complete (and clean) data set*
+  
+Doing parts 1-5 for haart2.csv
+```{r}
+haart2[,9] <- as.Date(haart2[,9], format="%m/%d/%y")
+haart2[,10] <- as.Date(haart2[,10], format="%m/%d/%y")
+haart2[,12] <- as.Date(haart2[,12], format="%m/%d/%y")
+```
+```{r}
+haart2[,'deathWithinYear'] <- rep(0,4)
+for(i in 1:length(haart2[,'deathWithinYear'])){
+  ifelse(as.numeric(difftime(haart2[i,12], haart2[i,9], units='days')) <= 365, haart2[i,'deathWithinYear'] <- 1, haart2[i,'deathWithinYear'] <- 0)
+}
+```
+```{r}
+haart2[,'followup.time'] <- rep(0,4)
+
+for(i in 1:length(haart2[,'followup.time'])){
+  last.init.diff <- NULL
+  death.init.diff <- NULL
+  
+  if(!is.na(haart2[i,'last.visit'])) death.init.diff <- difftime(haart2[i,'last.visit'],haart2[i,'init.date'],units='days')
+  if(!is.na(haart2[i,'date.death'])) last.init.diff <- difftime(haart2[i,'date.death'],haart2[i,'init.date'],units='days')
+  
+haart2[i,'followup.time'] <- min(365,last.init.diff,death.init.diff)
+}
+
+```
+```{r}
+haart2[,'loss.to.followup'] <- rep(0,4)
+
+#if not dead and followup is within 1 year of init.date 
+for(i in 1:length(haart2[,'loss.to.followup'])){
+  if(!is.na(haart2[i,'last.visit'])) dif <- difftime(haart2[i,'last.visit'],haart2[i,'init.date'],units='days')
+  
+  if(dif <= 365 & haart2[i,'death'] == 0){
+    haart2[i,'loss.to.followup'] <- 1
+  }
+  }
+
+```
+```{r}
+reg_list2 <- strsplit(as.character(haart2[,'init.reg']), ',')
+head(sapply(reg_list2, function(x) 'D4T' %in% x))
+#we use the all_drugs from part 5 because we need all drug variables from haart, since
+#haart2 only has a subset of them
+reg_drugs2 <- matrix(nrow=nrow(haart2), ncol=length(all_drugs))
+for(i in seq_along(all_drugs)){
+  # + makes this 1/0 instead of T/F
+  reg_drugs2[,i] <- +sapply(reg_list2, function(x) all_drugs[i] %in% x)
+}
+colnames(reg_drugs2) <- all_drugs
+haart2 <- cbind(haart2, reg_drugs2)
+```
+
+```{r}
+head(haart)
+head(haart2)
+```
+```{r}
+haart3 <- rbind(haart,haart2)
+```
+
+```{r}
+head(haart3)
+tail(haart3)
+```
+
+
+#Exercise 2
+*Obtain the code for using Newton's Method to estimate logistic regression parameters (logistic.r) and modify it to predict death from weight, hemoglobin and cd4baseline in the HAART dataset. Use complete cases only. Report the estimates for each parameter, including the intercept.*  
+
+*Note: The original script logistic_debug.r is in the exercises folder. It needs modification, specifically, the logistic function should be defined:*   
+`logistic <- function(x) 1 / (1 + exp(-x))`
+
+```{r}
+predictors <- haart[,c("death","weight","hemoglobin","cd4baseline")] #we only care about these predictors and response
+predictors <- predictors[complete.cases(predictors),] #we only want the complete cases of the data with these 4 variables
+
+
+x <- predictors[2:4] #this is the predictor variables
+y <- predictors[1] #this is the response variable
+
+
+estimate_logistic <- function(x, y, MAX_ITER=10) {
+
+  # Logistic function
+  logistic <- function(x) 1 / (1 + exp(-x))
+    n <- dim(x)[1]
+    k <- dim(x)[2]
+
+    x <- as.matrix(cbind(rep(1, n), x))
+    y <- as.matrix(y)
+
+    # Initialize fitting parameters
+    theta <- rep(0, k+1)
+
+    J <- rep(0, MAX_ITER)
+
+    for (i in 1:MAX_ITER) {
+
+        # Calculate linear predictor
+        z <- x %*% theta
+        # Apply logit function
+        h <- logistic(z)
+
+        # Calculate gradient
+        grad <- t((1/n)*x) %*% as.matrix(h - y)
+        # Calculate Hessian
+        H <- t((1/n)*x) %*% diag(array(h)) %*% diag(array(1-h)) %*% x
+
+        # Calculate log likelihood
+        J[i] <- (1/n) %*% sum(-y * log(h) - (1-y) * log(1-h))
+
+        # Newton's method
+        theta <- theta - solve(H) %*% grad
+    }
+
+    return(theta)
+}
+
+estimate_logistic(x, y)
+# Compare with R's built-in linear regression
+#g <- glm(disease ~ test1 + test2, data=data, family=binomial(logit))
+#print(g$coefficients)
+```
+
+
+#Question 3
+*Import the addr.txt file from the GitHub repository. This file contains a listing of names and addresses (thanks google). Parse each line to create a data.frame with the following columns: lastname, firstname, streetno, streetname, city, state, zip. Keep middle initials or abbreviated names in the firstname column. Print out the entire data.frame.*  
+```{r}
+setwd("~/Documents/Vanderbilt_2015_Fall/Statistical_Computing/Bios6301-master/datasets")
+addr <- readLines("addr.txt") #read in the data
+addr <- strsplit(addr, split = "  +") #split by two or more spaces so we keep the correct things together
+```
+```{r}
+dataframe <- do.call(rbind.data.frame,addr) #put into dataframe
+names(dataframe) <- c("LastName","FirstName","Address","City","State","Zip") #names
+dataframe[] <- lapply(dataframe, as.character) #strings as charaacters
+```
+```{r}
+library(stringr)
+dataframe$StreetNo <- str_split_fixed(dataframe$Address, " ",n=2) #putting street numbers into column
+
+for(i in 1:length(addr)){
+  dataframe$StreetName[i] <- str_split_fixed(dataframe$Address[i], " ",n=2)[2] #putting street names into column
+}
+
+dataframe$Address <- NULL #eliminate address column
+```
+```{r}
+dataframe
+```
+
+
+#Question 4
+*The first argument to most functions that fit linear models are formulas. The following example defines the response variable death and allows the model to incorporate all other variables as terms. . is used to mean all columns not otherwise in the formula.*  
+
+```{r}
+url <- "https://github.com/fonnesbeck/Bios6301/raw/master/datasets/haart.csv"
+haart_df <- read.csv(url)[,c('death','weight','hemoglobin','cd4baseline')]
+coef(summary(glm(death ~ ., data=haart_df, family=binomial(logit))))
+```
+*Now imagine running the above several times, but with a different response and data set each time. Here's a function:*  
+```{r}
+myfun <- function(dat, response) {
+  form <- as.formula(response ~ .)
+  coef(summary(glm(form, data=dat, family=binomial(logit))))
+}
+```
+*Unfortunately, it doesn't work. tryCatch is "catching" the error so that this file can be knit to PDF.*
+```{r}
+tryCatch(myfun(haart_df, death), error = function(e) e)
+```
+What do you think is going on? Consider using debug to trace the problem.  
+  
+The error given says that `death` is not found. When debugging, it says the object `form` not found. When I call `?as.formula()`, it says that it takes an object as it's argument. When I run `class(response ~ .)`, it says that it is a formula. So, I think that we are not passing in the formula correctly, thus form isn't going to be defined.
+When doing regression, you also need to specify where the variables are coming from, otherwise R won't know what to do with them. Death is the response, so the response isn't being passed correctly. We need to define which dataset it is coming from.
+
+#Bonus points
+```{r}
+myfun2 <- function(dat, response) {
+  dat$response2 <- dat[,response] #calls the column of the dataset that we want the 
+  #response to be and assigns it to response2 in the data
+  coef(summary(glm(response2 ~ ., data=dat, family=binomial(logit)))) #replace the original `form`, with response2 ~ ., since now we know where response2 is coming from
+}
+myfun2(haart_df, 'death')
+```
+
